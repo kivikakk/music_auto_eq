@@ -1,33 +1,224 @@
 #!/usr/bin/env ruby
 
+require 'bigdecimal'
+require 'tempfile'
+
 BANDS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
+
+def usage
+  STDERR.puts "usage:"
+  STDERR.puts "  #$0 [-f PATH_TO_PLIST]"
+  STDERR.puts "     list all EQs"
+  STDERR.puts
+  STDERR.puts "  #$0 [-f PATH_TO_PLIST] show NAME"
+  STDERR.puts "     show EQ setting with name NAME"
+  STDERR.puts
+  STDERR.puts "  #$0 [-f PATH_TO_PLIST] autoeq [-n] NAME PATH_TO_EQ.TXT [PREAMP_HEADROOM]"
+  STDERR.puts "     update EQ setting with name NAME using the fixed band EQ"
+  STDERR.puts "     settings specified.  Defaults to 0.5 dB of headroom."
+  STDERR.puts "     Specify -n for a dry run."
+  STDERR.puts "     Example input file: https://git.io/JLKUa"
+  STDERR.puts
+  STDERR.puts "I didn't use a proper argument parser so the order of options is non-negotiable."
+  exit 1
+end
 
 def format_db(db)
   if db == 0
     "-0.0 dB"
   else
-    "#{db.to_f / 100} dB"
+    "#{sprintf "%0.02f", BigDecimal(db) / 100} dB"
+  end
+end
+
+class EQ
+  attr_reader :name, :index
+  attr_accessor :preamp, :bands
+
+  def initialize(name, index, str)
+    @name = name
+    @index = index
+    @preamp, *@bands = str.unpack('s>*')
+  end
+
+  def ==(rhs)
+    @name == rhs.name and
+      @index == rhs.index and
+      @preamp == rhs.preamp and
+      @bands == rhs.bands
+  end
+
+  def inspect
+    arr = [
+      "Name: #@name (##@index)",
+      "Preamp: #{format_db(@preamp)}",
+    ]
+    BANDS.each.with_index do |b,i|
+      arr << "#{b} Hz: #{format_db(@bands[i])}"
+    end
+    arr.join "\n"
+  end
+
+  def pack_eq
+    ([@preamp] + @bands).pack('s>*')
   end
 end
 
 class Settings
-  def initialize(str)
-    @preamp, *@bands = str.unpack('s>*')
+  attr_reader :eqs
+
+  MAGIC = "bplist00\xd1\x01\x02_\x10\x12eqps:129:EQPresets".b
+
+  def initialize(filename)
+    @filename = filename.freeze
+    @bplist = read_file(@filename).freeze
+    @eqs = parse_eqs(@bplist)
   end
 
-  def inspect
-    (["Preamp: #{format_db(@preamp)}"] + BANDS.map.with_index { |b,i| "#{b} Hz: #{format_db(@bands[i])}" }).join "\n"
+  def rewrite(eq, dry_run:)
+    old_eqs = parse_eqs(@bplist)
+    if old_eqs[eq.index].name != eq.name
+      fail "name doesn't match, aborting (rewriting #{eq.name} but found #{old_eqs[eq.index].name})"
+    end
+
+    new_bplist = replace_eq(@bplist, eq)
+    if @bplist == new_bplist
+      puts "no changes to be made"
+    elsif @bplist.length != new_bplist.length
+      fail "new bplist wrong size"
+    else
+      # XXX Hardcoded expectation that "eq" has been modified in-place
+      # from @eqs.
+      new_eqs = parse_eqs(new_bplist)
+      if @eqs != new_eqs
+        fail "new bplist didn't parse as expected"
+      end
+
+      if dry_run
+        puts "dry run, not touching disk"
+      else
+        copy_path = Tempfile.create("music_auto_eq.plist", &:path)
+        File.open(copy_path, 'wb') { |f| f.write(@bplist) }
+        puts "backed up #@filename to #{copy_path}"
+
+        File.open(@filename, "wb") { |f| f.write(new_bplist) }
+        puts "saved new EQ at #@filename"
+      end
+    end
+  end
+
+  private
+
+  def read_file(filename)
+    File.open(filename, "rb", &:read)
+  end
+
+  def parse_eqs(bplist)
+    if bplist[0...MAGIC.length] != MAGIC
+      fail "format unrecognised"
+    end
+
+    offset = 0x2a2
+    index = 0
+    eqs = []
+    while offset + 0x200 + 22 < bplist.length
+      name_length = bplist[offset...offset+2].unpack('s>')[0]
+      name = bplist[offset+2...offset+2+name_length*2].force_encoding(Encoding::UTF_16BE).encode(Encoding::UTF_8)
+      eqs << EQ.new(name, index, bplist[offset+0x200...offset+0x200+22])
+      index += 1
+      offset += 0x27c
+    end
+    eqs
+  end
+
+  def replace_eq(bplist, eq)
+    if bplist[0...MAGIC.length] != MAGIC
+      fail "format unrecognised"
+    end
+
+    offset = 0x2a2
+    index = 0
+    replaced = false
+    while offset + 0x200 + 22 < bplist.length
+      name_length = bplist[offset...offset+2].unpack('s>')[0]
+      name = bplist[offset+2...offset+2+name_length*2].force_encoding(Encoding::UTF_16BE).encode(Encoding::UTF_8)
+      if name == eq.name and index == eq.index
+        if replaced
+          fail "found matching eq twice"
+        end
+        replaced = true
+        bplist = bplist[0...offset+0x200] + eq.pack_eq + bplist[offset+0x200+22..-1]
+      end
+      index += 1
+      offset += 0x27c
+    end
+
+    bplist
   end
 end
 
-bplist = File.open("#{ENV["HOME"]}/Library/Preferences/com.apple.Music.eq.plist", "rb", &:read)
-name_match = [ARGV[0].length].pack('s>') +ARGV[0].chars.map { |c| "\x00#{c}" }.join
-
-count = bplist.scan(name_match).count
-if count != 1
-  fail "expected one match, got #{count}"
+path = "#{ENV["HOME"]}/Library/Preferences/com.apple.Music.eq.plist"
+if ARGV.length >= 2 and ARGV[0] == "-f"
+  ARGV.shift
+  path = ARGV.shift
 end
 
-index = bplist.index(name_match)
-settings = Settings.new(bplist[index+0x200...index+0x200+22])
-p settings
+if ARGV.length == 0
+  settings = Settings.new(path)
+
+  settings.eqs.each do |eq|
+    p eq
+    puts
+  end
+elsif ARGV.length == 2 and ARGV[0] == "show"
+  settings = Settings.new(path)
+  eq = settings.eqs.find { |e| e.name == ARGV[1] }
+  if eq
+    p eq
+  else
+    STDERR.puts "couldn't find EQ named #{ARGV[1].inspect} in #{path}"
+    exit 1
+  end
+elsif (3..5).include?(ARGV.length) and ARGV[0] == 'autoeq'
+  ARGV.shift
+  dry_run = false
+  if ARGV[0] == "-n"
+    ARGV.shift
+    dry_run = true
+  end
+
+  eq_name = ARGV.shift
+  eq_path = ARGV.shift
+
+  headroom = 50
+  if ARGV.length == 1
+    headroom = (BigDecimal(ARGV.shift) * 100).to_i
+  end
+
+  if ARGV.length > 0
+    usage
+  end
+
+  settings = Settings.new(path)
+  eq = settings.eqs.find { |e| e.name == eq_name }
+  if !eq
+    STDERR.puts "couldn't find EQ named #{eq_name.inspect} in #{path}"
+    exit 1
+  end
+
+  puts "Before:"
+  p eq
+
+  bands = File.read(eq_path).split("\n").map { |l| l =~ /Gain (-?[0-9.]+) dB/; (BigDecimal($1) * 100).to_i }
+  eq.preamp = -(bands.max + headroom)
+  eq.bands = bands
+
+  puts
+  puts "After:"
+  p eq
+  puts
+
+  settings.rewrite(eq, dry_run: dry_run)
+else
+  usage
+end
