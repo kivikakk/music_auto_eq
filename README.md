@@ -4,7 +4,7 @@ Helps you manage equaliser settings in Music.app.
 
 ## usage
 
-```shell
+```console
 $ ./music_auto_eq help
 usage:
   ./music_auto_eq [-f PATH_TO_PLIST]
@@ -27,7 +27,7 @@ $
 
 Let's see what equalisers come with the system:
 
-```shell
+```console
 $ ./music_auto_eq
  #0 Acoustic             [  -0.0 dB]   5.00 dB   4.90 dB   3.95 dB   1.05 dB   2.15 dB   1.75 dB   3.50 dB   4.10 dB   3.55 dB   2.15 dB
  #1 Bass Booster         [  -0.0 dB]   5.50 dB   4.25 dB   3.50 dB   2.50 dB   1.25 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB
@@ -62,7 +62,7 @@ First, open Music.app and open the **Equaliser** (Window → Equaliser, or <kbd>
 
 Quit Music.app. You might have to wait a few seconds for it to be saved to disk, but it should eventually appear in the `music_auto_eq` output:
 
-```shell
+```console
 $ ./music_auto_eq
 […]
 #15 qc35 II ANC 2        [  -0.0 dB]   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB
@@ -72,7 +72,7 @@ The numbers might look different if you had a different EQ preset selected when 
 
 Now let's try replacing that with the presets from AutoEq.  Choose the FixedBandEQ.txt variant for your headphones (I'll use [this one](https://github.com/jaakkopasanen/AutoEq/blob/60b28289d1724586a333835d1162751e6079d6c6/results/referenceaudioanalyzer/referenceaudioanalyzer_hdm-x_harman_over-ear_2018/Bose%20QuietComfort%2035%20II%20(wireless%2C%20ANC%202)/Bose%20QuietComfort%2035%20II%20(wireless%2C%20ANC%202)%20FixedBandEQ.txt)) and download it. First we'll try a dry run with `-n`:
 
-```shell
+```console
 $ ./music_auto_eq autoeq -n 'qc35 II ANC 2' 'Bose QuietComfort 35 II (wireless, ANC 2) FixedBandEQ.txt' 
 Before: #15 qc35 II ANC 2        [  -0.0 dB]   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB
  After: #15 qc35 II ANC 2        [ -5.10 dB]  -5.50 dB  -2.70 dB  -2.30 dB  -1.90 dB  -0.70 dB   1.30 dB   0.50 dB   -0.0 dB   4.60 dB  -0.40 dB
@@ -85,7 +85,7 @@ So far so good! The preamp is calculated to offset the EQ to avoid clipping (per
 
 Let's say we like this. Drop `-n` and run for realsies:
 
-```
+```console
 $ ./music_auto_eq autoeq 'qc35 II ANC 2' 'Bose QuietComfort 35 II (wireless, ANC 2) FixedBandEQ.txt'
 Before: #15 qc35 II ANC 2        [  -0.0 dB]   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB   -0.0 dB
  After: #15 qc35 II ANC 2        [ -5.10 dB]  -5.50 dB  -2.70 dB  -2.30 dB  -1.90 dB  -0.70 dB   1.30 dB   0.50 dB   -0.0 dB   4.60 dB  -0.40 dB
@@ -100,3 +100,11 @@ Fingers crossed it worked! Open Music.app and find out:
 <img width="552" alt="image" src="https://user-images.githubusercontent.com/1915/102852235-e5a94100-4471-11eb-8336-c8c38fa756b9.png">
 
 Looks good! Enjoy your EQ!
+
+### disclaimer
+
+`music_auto_eq` tries hard not to eat your plist, but no promises are made. It makes a backup of the target file before overwriting it.
+
+### license
+
+[The Unlicense](https://github.com/kivikakk/music_auto_eq/blob/3036d5b20cbc6326aa4ddd961f1f4d3256c412dc/LICENSE) covers this work.
