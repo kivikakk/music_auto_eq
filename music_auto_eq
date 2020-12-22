@@ -1,0 +1,33 @@
+#!/usr/bin/env ruby
+
+BANDS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
+
+def format_db(db)
+  if db == 0
+    "-0.0 dB"
+  else
+    "#{db.to_f / 100} dB"
+  end
+end
+
+class Settings
+  def initialize(str)
+    @preamp, *@bands = str.unpack('s>*')
+  end
+
+  def inspect
+    (["Preamp: #{format_db(@preamp)}"] + BANDS.map.with_index { |b,i| "#{b} Hz: #{format_db(@bands[i])}" }).join "\n"
+  end
+end
+
+bplist = File.open("#{ENV["HOME"]}/Library/Preferences/com.apple.Music.eq.plist", "rb", &:read)
+name_match = [ARGV[0].length].pack('s>') +ARGV[0].chars.map { |c| "\x00#{c}" }.join
+
+count = bplist.scan(name_match).count
+if count != 1
+  fail "expected one match, got #{count}"
+end
+
+index = bplist.index(name_match)
+settings = Settings.new(bplist[index+0x200...index+0x200+22])
+p settings
