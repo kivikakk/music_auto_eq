@@ -49,14 +49,7 @@ class EQ
   end
 
   def inspect
-    arr = [
-      "Name: #@name (##@index)",
-      "Preamp: #{format_db(@preamp)}",
-    ]
-    BANDS.each.with_index do |b,i|
-      arr << "#{b} Hz: #{format_db(@bands[i])}"
-    end
-    arr.join "\n"
+    sprintf "% 3s %- 20s [% 9s] #{(["% 9s"] * 10).join(" ")}", "##@index", @name, format_db(@preamp), *@bands.map { |b| format_db(b) }
   end
 
   def pack_eq
@@ -168,7 +161,6 @@ if ARGV.length == 0
 
   settings.eqs.each do |eq|
     p eq
-    puts
   end
 elsif ARGV.length == 2 and ARGV[0] == "show"
   settings = Settings.new(path)
@@ -206,16 +198,13 @@ elsif (3..5).include?(ARGV.length) and ARGV[0] == 'autoeq'
     exit 1
   end
 
-  puts "Before:"
-  p eq
+  puts "Before: #{eq.inspect}"
 
   bands = File.read(eq_path).split("\n").map { |l| l =~ /Gain (-?[0-9.]+) dB/; (BigDecimal($1) * 100).to_i }
   eq.preamp = -(bands.max + headroom)
   eq.bands = bands
 
-  puts
-  puts "After:"
-  p eq
+  puts " After: #{eq.inspect}"
   puts
 
   settings.rewrite(eq, dry_run: dry_run)
