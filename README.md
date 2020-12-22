@@ -25,7 +25,7 @@ Preamp: -0.0 dB
 4000 Hz: -0.0 dB
 8000 Hz: -0.0 dB
 16000 Hz: -0.0 dB
-tapioca ~/C/presets (main|…) $ ./music_auto_eq "Bass Booster"
+$ ./music_auto_eq "Bass Booster"
 Preamp: -0.0 dB
 31 Hz: 5.5 dB
 62 Hz: 4.25 dB
