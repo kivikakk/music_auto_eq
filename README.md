@@ -54,7 +54,7 @@ $ ./music_auto_eq
 $
 ```
 
-Hmm, looks like the [AutoEq](https://github.com/jaakkopasanen/AutoEq) project has [some suggestions](https://github.com/jaakkopasanen/AutoEq/tree/60b28289d1724586a333835d1162751e6079d6c6/results/referenceaudioanalyzer/referenceaudioanalyzer_hdm-x_harman_over-ear_2018/Bose%20QuietComfort%2035%20II%20(wireless%2C%20ANC%202)) for the headphones I normally use. Let's try them out.
+Hmm, looks like the [AutoEQ](https://github.com/jaakkopasanen/AutoEq) project has [some suggestions](https://github.com/jaakkopasanen/AutoEq/tree/60b28289d1724586a333835d1162751e6079d6c6/results/referenceaudioanalyzer/referenceaudioanalyzer_hdm-x_harman_over-ear_2018/Bose%20QuietComfort%2035%20II%20(wireless%2C%20ANC%202)) for the headphones I normally use. Let's try them out.
 
 First, open Music.app and open the **Equaliser** (Window → Equaliser, or <kbd>⌥⌘E</kbd>). Create a new preset by selecting "Make Preset…" from the top of the dropdown menu:
 
@@ -70,7 +70,7 @@ $ ./music_auto_eq
 
 The numbers might look different if you had a different EQ preset selected when you created a new one. That's fine.
 
-Now let's try replacing that with the presets from AutoEq.  Choose the FixedBandEQ.txt variant for your headphones (I'll use [this one](https://github.com/jaakkopasanen/AutoEq/blob/60b28289d1724586a333835d1162751e6079d6c6/results/referenceaudioanalyzer/referenceaudioanalyzer_hdm-x_harman_over-ear_2018/Bose%20QuietComfort%2035%20II%20(wireless%2C%20ANC%202)/Bose%20QuietComfort%2035%20II%20(wireless%2C%20ANC%202)%20FixedBandEQ.txt)) and download it. First we'll try a dry run with `-n`:
+Now let's try replacing that with the presets from AutoEQ.  Choose the FixedBandEQ.txt variant for your headphones (I'll use [this one](https://github.com/jaakkopasanen/AutoEq/blob/60b28289d1724586a333835d1162751e6079d6c6/results/referenceaudioanalyzer/referenceaudioanalyzer_hdm-x_harman_over-ear_2018/Bose%20QuietComfort%2035%20II%20(wireless%2C%20ANC%202)/Bose%20QuietComfort%2035%20II%20(wireless%2C%20ANC%202)%20FixedBandEQ.txt)) and download it. First we'll try a dry run with `-n`:
 
 ```console
 $ ./music_auto_eq autoeq -n 'qc35 II ANC 2' 'Bose QuietComfort 35 II (wireless, ANC 2) FixedBandEQ.txt' 
