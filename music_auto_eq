@@ -200,7 +200,7 @@ elsif (3..5).include?(ARGV.length) and ARGV[0] == 'autoeq'
 
   puts "Before: #{eq.inspect}"
 
-  bands = File.read(eq_path).split("\n").map { |l| l =~ /Gain (-?[0-9.]+) dB/; (BigDecimal($1) * 100).to_i }
+  bands = File.read(eq_path).split("\n").reject { |l| l =~ /\APreamp/ }.map { |l| l =~ /Gain (-?[0-9.]+) dB/; (BigDecimal($1) * 100).to_i }
   eq.preamp = -(bands.max + headroom)
   eq.bands = bands
 
